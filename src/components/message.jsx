@@ -1,15 +1,25 @@
+/* eslint-disable react/prop-types */
 import { useEffect, useRef } from "react";
 
-// eslint-disable-next-line react/prop-types
 export default function Messages({ messages }) {
-  const el = useRef(null);
+  const messagesEndRef = useRef(null);
+
   useEffect(() => {
-    el.current.scrollIntoView({ block: "end", behavior: "smooth" });
-  });
+    scrollToBottom();
+  }, [messages]);
+
+  const scrollToBottom = () => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  };
+
   return (
     <div className="messages">
-      {messages}
-      <div id={"el"} ref={el} />
+      {messages.map((message, index) => (
+        <div key={index}>{message}</div>
+      ))}
+      <div ref={messagesEndRef} />
     </div>
   );
 }
