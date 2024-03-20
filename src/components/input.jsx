@@ -1,6 +1,7 @@
+/* eslint-disable react/prop-types */
+
 import { useState } from "react";
 
-// eslint-disable-next-line react/prop-types
 export default function Input({ onSend }) {
   const [text, setText] = useState("");
 
