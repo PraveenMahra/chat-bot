@@ -4,7 +4,7 @@ const API = {
       setTimeout(function () {
         if (message === "hello") resolve("Welcome to chatbot!");
         else resolve("Bot : " + message);
-      }, 2000);
+      }, 1000);
     });
   },
 };
