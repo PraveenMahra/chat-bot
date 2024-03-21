@@ -1,6 +1,4 @@
 import { useState, useEffect } from "react";
-import BotMessage from "./components/botMessage";
-import UserMessage from "./components/userMessage";
 import Messages from "./components/message";
 import Input from "./components/input";
 import Header from "./components/header";
@@ -15,9 +13,11 @@ function ChatBot() {
   useEffect(() => {
     async function loadWelcomeMessage() {
       const response = await API.GetChatbotResponse("hello");
-      const welcomeMessage = (
-        <BotMessage key={0} fetchMessage={() => response} />
-      );
+
+      const welcomeMessage = {
+        type: "bot",
+        text: response,
+      };
       setMessages([welcomeMessage]);
     }
     loadWelcomeMessage();
@@ -35,39 +35,59 @@ function ChatBot() {
 
   const send = async (text) => {
     if (text.trim() !== "") {
-      const userMessage = <UserMessage key={messages.length} text={text} />;
-      const botMessage = (
-        <BotMessage
-          key={messages.length + 1}
-          fetchMessage={async () => await API.GetChatbotResponse(text)}
-        />
-      );
+      const userMessage = {
+        type: "user",
+        text,
+      };
+      const botMessage = {
+        type: "bot",
+        text: await API.GetChatbotResponse(text),
+      };
+
       const newMessages = messages.concat(userMessage, botMessage);
       setMessages(newMessages);
+
+      // Update saved chats
+      const updatedSavedChats = savedChats.map((chat) => {
+        if (JSON.stringify(chat.messages) === JSON.stringify(messages)) {
+          return {
+            ...chat,
+            messages: newMessages.map((message) => ({ ...message })),
+          };
+        }
+        return chat;
+      });
+      setSavedChats(updatedSavedChats);
+      localStorage.setItem("savedChats", JSON.stringify(updatedSavedChats));
     }
   };
 
   const handleSaveChat = () => {
     if (messages.length > 1) {
-      const newChat = {
-        id: savedChats.length + 1,
-        messages: messages.map((message) => {
-          if (message.type === "bot") {
-            return {
-              type: "bot",
-              text: message.props.fetchMessage.toString(),
-            };
-          } else {
-            return {
-              type: "user",
-              text: message.props.text,
-            };
-          }
-        }),
-      };
-      const updatedSavedChats = [...savedChats, newChat];
-      setSavedChats(updatedSavedChats);
-      localStorage.setItem("savedChats", JSON.stringify(updatedSavedChats));
+      const existingChatIndex = savedChats.findIndex((chat) => {
+        return JSON.stringify(chat.messages) === JSON.stringify(messages);
+      });
+
+      if (existingChatIndex !== -1) {
+        const updatedChats = [...savedChats];
+        updatedChats[existingChatIndex] = {
+          ...updatedChats[existingChatIndex],
+          messages: messages.map((message) => ({ ...message })),
+        };
+        setSavedChats(updatedChats);
+        localStorage.setItem("savedChats", JSON.stringify(updatedChats));
+      } else {
+        const newChat = {
+          id:
+            savedChats.length > 0
+              ? savedChats[savedChats.length - 1].id + 1
+              : 1,
+          messages: messages.map((message) => ({ ...message })),
+        };
+        const updatedSavedChats = [...savedChats, newChat];
+        setSavedChats(updatedSavedChats);
+        localStorage.setItem("savedChats", JSON.stringify(updatedSavedChats));
+      }
     }
   };
 
@@ -77,6 +97,10 @@ function ChatBot() {
     );
     setSavedChats(updatedChats);
     localStorage.setItem("savedChats", JSON.stringify(updatedChats));
+
+    if (JSON.stringify(messages) === JSON.stringify(chatToDelete.messages)) {
+      setMessages([]);
+    }
   };
 
   const handleNewChat = () => {
@@ -84,21 +108,7 @@ function ChatBot() {
   };
 
   const handleChatSelect = (chat) => {
-    const chatMessages = chat.messages.map((message, index) => {
-      if (message.type === "bot") {
-        return (
-          <BotMessage
-            key={index}
-            fetchMessage={async () =>
-              await API.GetChatbotResponse(message.text)
-            }
-          />
-        );
-      } else {
-        return <UserMessage key={index} text={message.text} />;
-      }
-    });
-    setMessages(chatMessages);
+    setMessages(chat.messages.map((message) => ({ ...message }))); // Clone messages
   };
 
   return (
